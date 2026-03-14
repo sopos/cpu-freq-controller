@@ -38,7 +38,6 @@ TEMP_ABOVE_START_TIME=0
 LAST_FREQ_CHANGE_TIME=0
 ACTIVE_CONTROL=false
 PREV_TEMP=0
-HAS_FREQ_GAP=false
 
 ###############################################################################
 # Logging functions
@@ -144,49 +143,6 @@ is_fan_active() {
 # Frequency control logic
 ###############################################################################
 
-detect_frequency_gap() {
-    local max_freq=$(get_cpuinfo_max_freq)
-
-    # If max_freq is not higher than MAX_FREQ_LIMIT, there can't be a gap
-    if [[ $max_freq -le $MAX_FREQ_LIMIT ]]; then
-        HAS_FREQ_GAP=false
-        log "No frequency gap (max_freq <= MAX_FREQ_LIMIT)"
-        return
-    fi
-
-    # Calculate a test frequency in the middle of the supposed gap
-    local test_freq=$(( ($MAX_FREQ_LIMIT + $max_freq) / 2 ))
-
-    log "Testing for frequency gap by setting $test_freq kHz..."
-
-    # Try to set the test frequency
-    set_scaling_max_freq $test_freq
-
-    # Read back what was actually set
-    local actual_freq=$(get_current_scaling_max_freq)
-
-    # Restore original frequency
-    set_scaling_max_freq $ORIGINAL_MAX_FREQ
-    CURRENT_MAX_FREQ=$ORIGINAL_MAX_FREQ
-
-    # Check if the frequency was set as requested (with small tolerance for rounding)
-    local diff=$(( $actual_freq - $test_freq ))
-    if [[ $diff -lt 0 ]]; then
-        diff=$(( -$diff ))
-    fi
-
-    # If the difference is small (< 50MHz), the frequency was set successfully - no gap
-    if [[ $diff -lt 50000 ]]; then
-        HAS_FREQ_GAP=false
-        log "Frequency gap detection: NO GAP (test freq $test_freq kHz was set as $actual_freq kHz)"
-        log "Continuous frequency scaling available from $MAX_FREQ_LIMIT to $max_freq kHz"
-    else
-        HAS_FREQ_GAP=true
-        log "Frequency gap detection: GAP EXISTS (test freq $test_freq kHz was clamped to $actual_freq kHz)"
-        log "Will skip frequency range between $MAX_FREQ_LIMIT and $max_freq kHz"
-    fi
-}
-
 initialize_frequency_control() {
     ORIGINAL_MAX_FREQ=$(get_current_scaling_max_freq)
     CURRENT_MAX_FREQ=$ORIGINAL_MAX_FREQ
@@ -196,18 +152,15 @@ initialize_frequency_control() {
     local max_freq=$(get_cpuinfo_max_freq)
     log "CPU frequency range: $min_freq - $max_freq kHz ($(($min_freq / 1000)) - $(($max_freq / 1000)) MHz)"
     log "Frequency will be limited to max $MAX_FREQ_LIMIT kHz ($(($MAX_FREQ_LIMIT / 1000)) MHz)"
-
-    # Auto-detect if there's a gap between MAX_FREQ_LIMIT and max_freq
-    detect_frequency_gap
 }
 
 decrease_frequency() {
     local min_freq=$(get_cpuinfo_min_freq)
     local new_freq
 
-    # If there's a gap and we're above MAX_FREQ_LIMIT, jump directly to MAX_FREQ_LIMIT
+    # If we're above MAX_FREQ_LIMIT (2GHz), jump directly to MAX_FREQ_LIMIT
     # This skips the excluded range between 2GHz and cpuinfo_max_freq
-    if [[ $HAS_FREQ_GAP == true ]] && [[ $CURRENT_MAX_FREQ -gt $MAX_FREQ_LIMIT ]]; then
+    if [[ $CURRENT_MAX_FREQ -gt $MAX_FREQ_LIMIT ]]; then
         new_freq=$MAX_FREQ_LIMIT
     else
         # Normal decrement by FREQ_STEP
@@ -231,28 +184,21 @@ increase_frequency() {
     local max_freq=$(get_cpuinfo_max_freq)
     local new_freq
 
+    # If we're at MAX_FREQ_LIMIT (2GHz) and cpuinfo_max_freq is higher, jump to cpuinfo_max_freq
+    # This skips the excluded range between 2GHz and cpuinfo_max_freq
+    if [[ $CURRENT_MAX_FREQ -eq $MAX_FREQ_LIMIT && $max_freq -gt $MAX_FREQ_LIMIT ]]; then
+        new_freq=$max_freq
     # If we're already at or above max_freq, nothing to do
-    if [[ $CURRENT_MAX_FREQ -ge $max_freq ]]; then
+    elif [[ $CURRENT_MAX_FREQ -ge $max_freq ]]; then
         debug "Already at maximum frequency"
         return
-    fi
-
-    # If there's a gap: jump from MAX_FREQ_LIMIT directly to max_freq
-    if [[ $HAS_FREQ_GAP == true ]] && [[ $CURRENT_MAX_FREQ -eq $MAX_FREQ_LIMIT ]] && [[ $max_freq -gt $MAX_FREQ_LIMIT ]]; then
-        new_freq=$max_freq
     else
         # Normal increment by FREQ_STEP
         new_freq=$(($CURRENT_MAX_FREQ + $FREQ_STEP))
 
-        # If there's a gap, cap at MAX_FREQ_LIMIT (don't enter the excluded range)
-        # If there's no gap, allow incrementing all the way to max_freq
-        if [[ $HAS_FREQ_GAP == true ]] && [[ $new_freq -gt $MAX_FREQ_LIMIT ]] && [[ $CURRENT_MAX_FREQ -lt $MAX_FREQ_LIMIT ]]; then
+        # Cap at MAX_FREQ_LIMIT if we would exceed it (don't enter the excluded range)
+        if [[ $new_freq -gt $MAX_FREQ_LIMIT ]]; then
             new_freq=$MAX_FREQ_LIMIT
-        fi
-
-        # Always cap at max_freq
-        if [[ $new_freq -gt $max_freq ]]; then
-            new_freq=$max_freq
         fi
     fi
 
@@ -272,18 +218,10 @@ jump_to_max_frequency() {
         return
     fi
 
-    # If there's a gap and we're below MAX_FREQ_LIMIT, we can't jump across the gap
-    # The hardware won't allow it, so jump to MAX_FREQ_LIMIT instead
-    if [[ $HAS_FREQ_GAP == true ]] && [[ $CURRENT_MAX_FREQ -lt $MAX_FREQ_LIMIT ]]; then
-        set_scaling_max_freq $MAX_FREQ_LIMIT
-        log "Temperature very low - jumping to $MAX_FREQ_LIMIT kHz ($(($MAX_FREQ_LIMIT / 1000)) MHz) [gap exists, will jump to max_freq on next increase]"
-        LAST_FREQ_CHANGE_TIME=$(date +%s)
-    else
-        # No gap, or already at/above MAX_FREQ_LIMIT - jump directly to max_freq
-        set_scaling_max_freq $max_freq
-        log "Temperature very low - jumping to max frequency $max_freq kHz ($(($max_freq / 1000)) MHz)"
-        LAST_FREQ_CHANGE_TIME=$(date +%s)
-    fi
+    # Jump directly to max_freq
+    set_scaling_max_freq $max_freq
+    log "Temperature very low - jumping to max frequency $max_freq kHz ($(($max_freq / 1000)) MHz)"
+    LAST_FREQ_CHANGE_TIME=$(date +%s)
 }
 
 ###############################################################################
