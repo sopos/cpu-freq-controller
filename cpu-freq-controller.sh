@@ -188,18 +188,17 @@ increase_frequency() {
     # This skips the excluded range between 2GHz and cpuinfo_max_freq
     if [[ $CURRENT_MAX_FREQ -eq $MAX_FREQ_LIMIT && $max_freq -gt $MAX_FREQ_LIMIT ]]; then
         new_freq=$max_freq
+    # If we're already at or above max_freq, nothing to do
+    elif [[ $CURRENT_MAX_FREQ -ge $max_freq ]]; then
+        debug "Already at maximum frequency"
+        return
     else
         # Normal increment by FREQ_STEP
         new_freq=$(($CURRENT_MAX_FREQ + $FREQ_STEP))
 
-        # Don't enter the excluded range - cap at MAX_FREQ_LIMIT if we would exceed it
-        if [[ $new_freq -gt $MAX_FREQ_LIMIT && $MAX_FREQ_LIMIT -lt $max_freq ]]; then
+        # Cap at MAX_FREQ_LIMIT if we would exceed it (don't enter the excluded range)
+        if [[ $new_freq -gt $MAX_FREQ_LIMIT ]]; then
             new_freq=$MAX_FREQ_LIMIT
-        fi
-
-        # Overall cap at cpuinfo_max_freq
-        if [[ $new_freq -gt $max_freq ]]; then
-            new_freq=$max_freq
         fi
     fi
 
@@ -207,8 +206,6 @@ increase_frequency() {
         set_scaling_max_freq $new_freq
         log "Increased max frequency to $new_freq kHz ($(($new_freq / 1000)) MHz)"
         LAST_FREQ_CHANGE_TIME=$(date +%s)
-    else
-        debug "Already at maximum frequency"
     fi
 }
 
