@@ -1,0 +1,26 @@
+[Unit]
+Description=CPU Frequency Controller
+Documentation=file:///usr/local/bin/cpu-freq-controller.sh
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/cpu-freq-controller.sh
+Restart=on-failure
+RestartSec=10s
+StandardOutput=journal
+StandardError=journal
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log /sys/devices/system/cpu /sys/class/thermal /proc/acpi
+ProtectKernelTunables=false
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+
+[Install]
+WantedBy=multi-user.target
