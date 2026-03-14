@@ -38,6 +38,7 @@ TEMP_ABOVE_START_TIME=0
 LAST_FREQ_CHANGE_TIME=0
 ACTIVE_CONTROL=false
 PREV_TEMP=0
+ALLOWED_FREQS=()
 
 ###############################################################################
 # Logging functions
@@ -143,6 +144,79 @@ is_fan_active() {
 # Frequency control logic
 ###############################################################################
 
+build_allowed_frequency_map() {
+    local min_freq=$(get_cpuinfo_min_freq)
+    local max_freq=$(get_cpuinfo_max_freq)
+
+    log "Building allowed frequency map..."
+
+    # Start with empty array
+    ALLOWED_FREQS=()
+
+    # Test frequencies from min to max in FREQ_STEP increments
+    local test_freq=$min_freq
+
+    while [[ $test_freq -le $max_freq ]]; do
+        # Try to set the frequency
+        set_scaling_max_freq $test_freq
+
+        # Read back what was actually set
+        local actual_freq=$(get_current_scaling_max_freq)
+
+        # Check if this frequency is already in our list (to avoid duplicates from clamping)
+        local already_exists=false
+        for freq in "${ALLOWED_FREQS[@]}"; do
+            if [[ $freq -eq $actual_freq ]]; then
+                already_exists=true
+                break
+            fi
+        done
+
+        # Add to list if not already there
+        if [[ $already_exists == false ]]; then
+            ALLOWED_FREQS+=($actual_freq)
+        fi
+
+        test_freq=$(($test_freq + $FREQ_STEP))
+    done
+
+    # Restore original frequency
+    set_scaling_max_freq $ORIGINAL_MAX_FREQ
+    CURRENT_MAX_FREQ=$ORIGINAL_MAX_FREQ
+
+    log "Found ${#ALLOWED_FREQS[@]} allowed frequencies: ${ALLOWED_FREQS[0]} - ${ALLOWED_FREQS[-1]} kHz"
+    debug "Allowed frequencies: ${ALLOWED_FREQS[*]}"
+}
+
+find_next_lower_freq() {
+    local current=$1
+    local result=$current
+
+    # Find the highest frequency in ALLOWED_FREQS that is lower than current
+    for freq in "${ALLOWED_FREQS[@]}"; do
+        if [[ $freq -lt $current ]] && [[ $freq -gt $result || $result -eq $current ]]; then
+            result=$freq
+        fi
+    done
+
+    echo $result
+}
+
+find_next_higher_freq() {
+    local current=$1
+    local max_freq=$(get_cpuinfo_max_freq)
+    local result=$max_freq
+
+    # Find the lowest frequency in ALLOWED_FREQS that is higher than current
+    for freq in "${ALLOWED_FREQS[@]}"; do
+        if [[ $freq -gt $current ]] && [[ $freq -lt $result ]]; then
+            result=$freq
+        fi
+    done
+
+    echo $result
+}
+
 initialize_frequency_control() {
     ORIGINAL_MAX_FREQ=$(get_current_scaling_max_freq)
     CURRENT_MAX_FREQ=$ORIGINAL_MAX_FREQ
@@ -152,24 +226,13 @@ initialize_frequency_control() {
     local max_freq=$(get_cpuinfo_max_freq)
     log "CPU frequency range: $min_freq - $max_freq kHz ($(($min_freq / 1000)) - $(($max_freq / 1000)) MHz)"
     log "Frequency will be limited to max $MAX_FREQ_LIMIT kHz ($(($MAX_FREQ_LIMIT / 1000)) MHz)"
+
+    # Build map of allowed frequencies
+    build_allowed_frequency_map
 }
 
 decrease_frequency() {
-    local min_freq=$(get_cpuinfo_min_freq)
-    local new_freq
-
-    # If we're above MAX_FREQ_LIMIT (2GHz), jump directly to MAX_FREQ_LIMIT
-    # This skips the excluded range between 2GHz and cpuinfo_max_freq
-    if [[ $CURRENT_MAX_FREQ -gt $MAX_FREQ_LIMIT ]]; then
-        new_freq=$MAX_FREQ_LIMIT
-    else
-        # Normal decrement by FREQ_STEP
-        new_freq=$(($CURRENT_MAX_FREQ - $FREQ_STEP))
-
-        if [[ $new_freq -lt $min_freq ]]; then
-            new_freq=$min_freq
-        fi
-    fi
+    local new_freq=$(find_next_lower_freq $CURRENT_MAX_FREQ)
 
     if [[ $new_freq -ne $CURRENT_MAX_FREQ ]]; then
         set_scaling_max_freq $new_freq
@@ -182,25 +245,14 @@ decrease_frequency() {
 
 increase_frequency() {
     local max_freq=$(get_cpuinfo_max_freq)
-    local new_freq
 
-    # If we're at MAX_FREQ_LIMIT (2GHz) and cpuinfo_max_freq is higher, jump to cpuinfo_max_freq
-    # This skips the excluded range between 2GHz and cpuinfo_max_freq
-    if [[ $CURRENT_MAX_FREQ -eq $MAX_FREQ_LIMIT && $max_freq -gt $MAX_FREQ_LIMIT ]]; then
-        new_freq=$max_freq
-    # If we're already at or above max_freq, nothing to do
-    elif [[ $CURRENT_MAX_FREQ -ge $max_freq ]]; then
+    # If we're already at maximum frequency, nothing to do
+    if [[ $CURRENT_MAX_FREQ -ge $max_freq ]]; then
         debug "Already at maximum frequency"
         return
-    else
-        # Normal increment by FREQ_STEP
-        new_freq=$(($CURRENT_MAX_FREQ + $FREQ_STEP))
-
-        # Cap at MAX_FREQ_LIMIT if we would exceed it (don't enter the excluded range)
-        if [[ $new_freq -gt $MAX_FREQ_LIMIT ]]; then
-            new_freq=$MAX_FREQ_LIMIT
-        fi
     fi
+
+    local new_freq=$(find_next_higher_freq $CURRENT_MAX_FREQ)
 
     if [[ $new_freq -ne $CURRENT_MAX_FREQ ]]; then
         set_scaling_max_freq $new_freq
