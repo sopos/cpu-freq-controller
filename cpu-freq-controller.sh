@@ -34,6 +34,8 @@ fi
 ORIGINAL_MAX_FREQ=""
 CURRENT_MAX_FREQ=""
 CPU_COUNT=0
+CPUINFO_MIN_FREQ=0
+CPUINFO_MAX_FREQ=0
 TEMP_ABOVE_START_TIME=0
 LAST_FREQ_CHANGE_TIME=0
 ACTIVE_CONTROL=false
@@ -145,18 +147,15 @@ is_fan_active() {
 ###############################################################################
 
 build_allowed_frequency_map() {
-    local min_freq=$(get_cpuinfo_min_freq)
-    local max_freq=$(get_cpuinfo_max_freq)
-
     log "Building allowed frequency map..."
 
     # Start with empty array
     ALLOWED_FREQS=()
 
     # Test frequencies from min to max in FREQ_STEP increments
-    local test_freq=$min_freq
+    local test_freq=$CPUINFO_MIN_FREQ
 
-    while [[ $test_freq -le $max_freq ]]; do
+    while [[ $test_freq -le $CPUINFO_MAX_FREQ ]]; do
         # Try to set the frequency
         set_scaling_max_freq $test_freq
 
@@ -204,8 +203,7 @@ find_next_lower_freq() {
 
 find_next_higher_freq() {
     local current=$1
-    local max_freq=$(get_cpuinfo_max_freq)
-    local result=$max_freq
+    local result=$CPUINFO_MAX_FREQ
 
     # Find the lowest frequency in ALLOWED_FREQS that is higher than current
     for freq in "${ALLOWED_FREQS[@]}"; do
@@ -218,13 +216,15 @@ find_next_higher_freq() {
 }
 
 initialize_frequency_control() {
+    # Cache static CPU frequency information
+    CPUINFO_MIN_FREQ=$(get_cpuinfo_min_freq)
+    CPUINFO_MAX_FREQ=$(get_cpuinfo_max_freq)
+
     ORIGINAL_MAX_FREQ=$(get_current_scaling_max_freq)
     CURRENT_MAX_FREQ=$ORIGINAL_MAX_FREQ
     log "Original max frequency: $ORIGINAL_MAX_FREQ kHz ($(($ORIGINAL_MAX_FREQ / 1000)) MHz)"
 
-    local min_freq=$(get_cpuinfo_min_freq)
-    local max_freq=$(get_cpuinfo_max_freq)
-    log "CPU frequency range: $min_freq - $max_freq kHz ($(($min_freq / 1000)) - $(($max_freq / 1000)) MHz)"
+    log "CPU frequency range: $CPUINFO_MIN_FREQ - $CPUINFO_MAX_FREQ kHz ($(($CPUINFO_MIN_FREQ / 1000)) - $(($CPUINFO_MAX_FREQ / 1000)) MHz)"
     log "Frequency will be limited to max $MAX_FREQ_LIMIT kHz ($(($MAX_FREQ_LIMIT / 1000)) MHz)"
 
     # Build map of allowed frequencies
@@ -244,10 +244,8 @@ decrease_frequency() {
 }
 
 increase_frequency() {
-    local max_freq=$(get_cpuinfo_max_freq)
-
     # If we're already at maximum frequency, nothing to do
-    if [[ $CURRENT_MAX_FREQ -ge $max_freq ]]; then
+    if [[ $CURRENT_MAX_FREQ -ge $CPUINFO_MAX_FREQ ]]; then
         debug "Already at maximum frequency"
         return
     fi
@@ -262,17 +260,15 @@ increase_frequency() {
 }
 
 jump_to_max_frequency() {
-    local max_freq=$(get_cpuinfo_max_freq)
-
     # If we're already at or above max_freq, nothing to do
-    if [[ $CURRENT_MAX_FREQ -ge $max_freq ]]; then
+    if [[ $CURRENT_MAX_FREQ -ge $CPUINFO_MAX_FREQ ]]; then
         debug "Already at maximum frequency"
         return
     fi
 
     # Jump directly to max_freq
-    set_scaling_max_freq $max_freq
-    log "Temperature very low - jumping to max frequency $max_freq kHz ($(($max_freq / 1000)) MHz)"
+    set_scaling_max_freq $CPUINFO_MAX_FREQ
+    log "Temperature very low - jumping to max frequency $CPUINFO_MAX_FREQ kHz ($(($CPUINFO_MAX_FREQ / 1000)) MHz)"
     LAST_FREQ_CHANGE_TIME=$(date +%s)
 }
 
@@ -311,9 +307,8 @@ control_loop() {
             fi
 
             # Check if we're at max_freq - if so, require initial delay + fan check
-            local max_freq=$(get_cpuinfo_max_freq)
             local at_max_freq=false
-            if [[ $CURRENT_MAX_FREQ -ge $max_freq ]]; then
+            if [[ $CURRENT_MAX_FREQ -ge $CPUINFO_MAX_FREQ ]]; then
                 at_max_freq=true
             fi
 
