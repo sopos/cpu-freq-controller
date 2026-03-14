@@ -209,6 +209,21 @@ increase_frequency() {
     fi
 }
 
+jump_to_max_frequency() {
+    local max_freq=$(get_cpuinfo_max_freq)
+
+    # If we're already at or above max_freq, nothing to do
+    if [[ $CURRENT_MAX_FREQ -ge $max_freq ]]; then
+        debug "Already at maximum frequency"
+        return
+    fi
+
+    # Jump directly to max_freq
+    set_scaling_max_freq $max_freq
+    log "Temperature very low - jumping to max frequency $max_freq kHz ($(($max_freq / 1000)) MHz)"
+    LAST_FREQ_CHANGE_TIME=$(date +%s)
+}
+
 ###############################################################################
 # Main control loop
 ###############################################################################
@@ -274,7 +289,14 @@ control_loop() {
             # Increase frequency if we're in active control
             if [[ $ACTIVE_CONTROL == true ]]; then
                 local time_since_change=$(($current_time - $LAST_FREQ_CHANGE_TIME))
-                if [[ $time_since_change -ge $FREQ_INCREASE_INTERVAL ]]; then
+
+                # If temperature is very low (below UPPER_LIMIT - 2*HYSTERESIS), jump directly to max
+                if [[ $temp -lt $(($TEMP_UPPER_LIMIT - 2 * $TEMP_HYSTERESIS)) ]]; then
+                    if [[ $time_since_change -ge $FREQ_INCREASE_INTERVAL ]]; then
+                        jump_to_max_frequency
+                    fi
+                # Otherwise, normal incremental increase
+                elif [[ $time_since_change -ge $FREQ_INCREASE_INTERVAL ]]; then
                     increase_frequency
                 fi
             fi
