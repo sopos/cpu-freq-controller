@@ -130,11 +130,11 @@ sudo systemctl disable cpu-freq-controller
 
 2. **Initial Trigger**: When temperature exceeds the upper limit for 30 seconds AND the cooling fan is active (configurable via `REQUIRE_FAN_ACTIVE`), frequency reduction begins. This 30-second delay also applies when reducing frequency from cpuinfo_max_freq (boost)
 
-3. **Frequency Reduction**: Every 20 seconds, the maximum CPU frequency is reduced by 100MHz until temperature drops. When above 2GHz (boost frequencies), it jumps directly to 2GHz, skipping the intermediate range. Note: reducing from cpuinfo_max_freq requires the 30s delay + fan check (if enabled)
+3. **Frequency Reduction**: Every 20 seconds, the maximum CPU frequency is reduced by 100MHz until temperature drops. If a frequency gap is detected (see below), frequencies above 2GHz jump directly to 2GHz. Note: reducing from cpuinfo_max_freq requires the 30s delay + fan check (if enabled)
 
-4. **Frequency Increase**: When temperature drops below (upper limit - hysteresis), the frequency is increased by 100MHz every 10 seconds. When reaching 2GHz, the script jumps directly to cpuinfo_max_freq if it's higher (e.g., boost frequency), skipping the intermediate range. **Fast recovery**: If temperature drops very low (below upper limit - 2×hysteresis), the script jumps directly to cpuinfo_max_freq regardless of current frequency
+4. **Frequency Increase**: When temperature drops below (upper limit - hysteresis), the frequency is increased by 100MHz every 10 seconds. If a gap exists, reaching 2GHz triggers a jump to cpuinfo_max_freq. **Fast recovery**: If temperature drops very low (below upper limit - 2×hysteresis), the script attempts to jump directly to maximum frequency
 
-5. **Frequency Range**: The script operates from cpuinfo_min_freq up to 2GHz in 100MHz steps. The range between 2GHz and cpuinfo_max_freq is excluded (skipped) in both directions - the script jumps directly between these two values
+5. **Frequency Gap Auto-Detection**: On startup, the script tests whether frequencies between 2GHz and cpuinfo_max_freq can be set. If a gap is detected (common with boost/turbo frequencies), the script will skip this range in both directions. If no gap exists, the script uses continuous 100MHz increments across the entire frequency range
 
 6. **Graceful Shutdown**: On exit (Ctrl+C or service stop), the script restores the original frequency limits
 
