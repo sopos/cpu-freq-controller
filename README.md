@@ -116,9 +116,9 @@ sudo systemctl disable cpu-freq-controller
 
 3. **Frequency Reduction**: Every 20 seconds, the maximum CPU frequency is reduced by 100MHz until temperature drops
 
-4. **Frequency Increase**: When temperature drops below (upper limit - hysteresis), the frequency is increased by 100MHz every 10 seconds
+4. **Frequency Increase**: When temperature drops below (upper limit - hysteresis), the frequency is increased by 100MHz every 10 seconds. When reaching 2GHz, the script can jump directly to cpuinfo_max_freq if it's higher (e.g., boost frequency)
 
-5. **Frequency Range**: The script respects hardware limits (cpuinfo_min_freq to cpuinfo_max_freq) with an additional configurable limit (default 2GHz)
+5. **Frequency Range**: The script operates from cpuinfo_min_freq up to 2GHz in 100MHz steps, with an optional jump to cpuinfo_max_freq (boost frequency) from 2GHz
 
 6. **Graceful Shutdown**: On exit (Ctrl+C or service stop), the script restores the original frequency limits
 

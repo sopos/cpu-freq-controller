@@ -163,17 +163,25 @@ decrease_frequency() {
 
 increase_frequency() {
     local max_freq=$(get_cpuinfo_max_freq)
-    local effective_max=$max_freq
+    local new_freq
 
-    # Limit to MAX_FREQ_LIMIT or cpuinfo_max_freq, whichever is appropriate
-    if [[ $MAX_FREQ_LIMIT -lt $max_freq ]]; then
-        effective_max=$MAX_FREQ_LIMIT
-    fi
+    # If we're at MAX_FREQ_LIMIT (2GHz) and cpuinfo_max_freq is higher, jump to cpuinfo_max_freq
+    if [[ $CURRENT_MAX_FREQ -eq $MAX_FREQ_LIMIT && $max_freq -gt $MAX_FREQ_LIMIT ]]; then
+        new_freq=$max_freq
+    else
+        # Normal increment by FREQ_STEP
+        new_freq=$(($CURRENT_MAX_FREQ + $FREQ_STEP))
 
-    local new_freq=$(($CURRENT_MAX_FREQ + $FREQ_STEP))
-
-    if [[ $new_freq -gt $effective_max ]]; then
-        new_freq=$effective_max
+        # Cap at MAX_FREQ_LIMIT if below it, or at cpuinfo_max_freq if above
+        if [[ $new_freq -le $MAX_FREQ_LIMIT ]]; then
+            if [[ $new_freq -gt $MAX_FREQ_LIMIT ]]; then
+                new_freq=$MAX_FREQ_LIMIT
+            fi
+        else
+            if [[ $new_freq -gt $max_freq ]]; then
+                new_freq=$max_freq
+            fi
+        fi
     fi
 
     if [[ $new_freq -ne $CURRENT_MAX_FREQ ]]; then
