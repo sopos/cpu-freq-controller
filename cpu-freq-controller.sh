@@ -20,6 +20,7 @@ FREQ_STEP=100000                # Frequency step in kHz (100MHz)
 FREQ_DECREASE_INTERVAL=20       # Interval for decreasing frequency (seconds)
 FREQ_INCREASE_INTERVAL=10       # Interval for increasing frequency (seconds)
 MAX_FREQ_LIMIT=2000000          # Maximum frequency limit in kHz (2GHz)
+REQUIRE_FAN_ACTIVE=1            # Require fan to be active before frequency reduction (1=yes, 0=no)
 
 # Load configuration from file if it exists
 if [[ -f "$CONFIG_FILE" ]]; then
@@ -261,14 +262,25 @@ control_loop() {
             if [[ $ACTIVE_CONTROL == false ]] || [[ $at_max_freq == true ]]; then
                 local elapsed=$(($current_time - $TEMP_ABOVE_START_TIME))
                 if [[ $elapsed -ge $INITIAL_DELAY ]]; then
-                    if is_fan_active; then
+                    # Check fan requirement if enabled
+                    local fan_ok=true
+                    if [[ $REQUIRE_FAN_ACTIVE -eq 1 ]]; then
+                        if ! is_fan_active; then
+                            fan_ok=false
+                            debug "Waiting for fan to activate before controlling frequency"
+                        fi
+                    fi
+
+                    if [[ $fan_ok == true ]]; then
                         if [[ $ACTIVE_CONTROL == false ]]; then
-                            log "Initiating active frequency control (temp elevated for ${elapsed}s, fan active)"
+                            if [[ $REQUIRE_FAN_ACTIVE -eq 1 ]]; then
+                                log "Initiating active frequency control (temp elevated for ${elapsed}s, fan active)"
+                            else
+                                log "Initiating active frequency control (temp elevated for ${elapsed}s)"
+                            fi
                             ACTIVE_CONTROL=true
                         fi
                         decrease_frequency
-                    else
-                        debug "Waiting for fan to activate before controlling frequency"
                     fi
                 fi
             else

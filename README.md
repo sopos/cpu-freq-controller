@@ -40,6 +40,7 @@ sudo systemctl restart cpu-freq-controller
 | `FREQ_DECREASE_INTERVAL` | 20 | Interval for decreasing frequency (seconds) |
 | `FREQ_INCREASE_INTERVAL` | 10 | Interval for increasing frequency (seconds) |
 | `MAX_FREQ_LIMIT` | 2000000 | Maximum frequency limit in kHz (2GHz) |
+| `REQUIRE_FAN_ACTIVE` | 1 | Require fan active before reducing frequency (1=yes, 0=no) |
 | `VERBOSE` | 1 | Logging verbosity (0=minimal, 1=debug) |
 
 **Example:** To change the temperature limit to 70°C, edit `/etc/cpu-freq-controller.conf`:
@@ -127,9 +128,9 @@ sudo systemctl disable cpu-freq-controller
 
 1. **Temperature Monitoring**: The script continuously monitors CPU temperature from `/sys/class/thermal/thermal_zone*/temp`
 
-2. **Initial Trigger**: When temperature exceeds the upper limit for 30 seconds AND the cooling fan is active, frequency reduction begins. This 30-second delay also applies when reducing frequency from cpuinfo_max_freq (boost)
+2. **Initial Trigger**: When temperature exceeds the upper limit for 30 seconds AND the cooling fan is active (configurable via `REQUIRE_FAN_ACTIVE`), frequency reduction begins. This 30-second delay also applies when reducing frequency from cpuinfo_max_freq (boost)
 
-3. **Frequency Reduction**: Every 20 seconds, the maximum CPU frequency is reduced by 100MHz until temperature drops. When above 2GHz (boost frequencies), it jumps directly to 2GHz, skipping the intermediate range. Note: reducing from cpuinfo_max_freq requires the 30s delay + fan check
+3. **Frequency Reduction**: Every 20 seconds, the maximum CPU frequency is reduced by 100MHz until temperature drops. When above 2GHz (boost frequencies), it jumps directly to 2GHz, skipping the intermediate range. Note: reducing from cpuinfo_max_freq requires the 30s delay + fan check (if enabled)
 
 4. **Frequency Increase**: When temperature drops below (upper limit - hysteresis), the frequency is increased by 100MHz every 10 seconds. When reaching 2GHz, the script jumps directly to cpuinfo_max_freq if it's higher (e.g., boost frequency), skipping the intermediate range. **Fast recovery**: If temperature drops very low (below upper limit - 2×hysteresis), the script jumps directly to cpuinfo_max_freq regardless of current frequency
 
@@ -142,6 +143,8 @@ sudo systemctl disable cpu-freq-controller
 The script includes specific support for ThinkPad laptops:
 - Detects fan activity from `/proc/acpi/ibm/fan`
 - Falls back to hwmon interface if ThinkPad interface is unavailable
+
+**Note:** If fan detection doesn't work on your system or you want more aggressive thermal management, you can disable the fan requirement by setting `REQUIRE_FAN_ACTIVE=0` in `/etc/cpu-freq-controller.conf`. This will allow frequency reduction based solely on the temperature and time thresholds.
 
 ## Troubleshooting
 
