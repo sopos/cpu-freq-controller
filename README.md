@@ -127,9 +127,9 @@ sudo systemctl disable cpu-freq-controller
 
 1. **Temperature Monitoring**: The script continuously monitors CPU temperature from `/sys/class/thermal/thermal_zone*/temp`
 
-2. **Initial Trigger**: When temperature exceeds the upper limit for 30 seconds AND the cooling fan is active, frequency reduction begins
+2. **Initial Trigger**: When temperature exceeds the upper limit for 30 seconds AND the cooling fan is active, frequency reduction begins. This 30-second delay also applies when reducing frequency from cpuinfo_max_freq (boost)
 
-3. **Frequency Reduction**: Every 20 seconds, the maximum CPU frequency is reduced by 100MHz until temperature drops. When above 2GHz (boost frequencies), it jumps directly to 2GHz, skipping the intermediate range
+3. **Frequency Reduction**: Every 20 seconds, the maximum CPU frequency is reduced by 100MHz until temperature drops. When above 2GHz (boost frequencies), it jumps directly to 2GHz, skipping the intermediate range. Note: reducing from cpuinfo_max_freq requires the 30s delay + fan check
 
 4. **Frequency Increase**: When temperature drops below (upper limit - hysteresis), the frequency is increased by 100MHz every 10 seconds. When reaching 2GHz, the script jumps directly to cpuinfo_max_freq if it's higher (e.g., boost frequency), skipping the intermediate range
 

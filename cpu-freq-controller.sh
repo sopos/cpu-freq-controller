@@ -233,20 +233,31 @@ control_loop() {
                 log "Temperature above threshold: $(($temp / 1000))°C"
             fi
 
-            # Check if we should start active control
-            if [[ $ACTIVE_CONTROL == false ]]; then
+            # Check if we're at max_freq - if so, require initial delay + fan check
+            local max_freq=$(get_cpuinfo_max_freq)
+            local at_max_freq=false
+            if [[ $CURRENT_MAX_FREQ -ge $max_freq ]]; then
+                at_max_freq=true
+            fi
+
+            # Apply initial delay + fan check when:
+            # 1. Active control not yet started, OR
+            # 2. We're at max_freq (requires delay before decreasing from max)
+            if [[ $ACTIVE_CONTROL == false ]] || [[ $at_max_freq == true ]]; then
                 local elapsed=$(($current_time - $TEMP_ABOVE_START_TIME))
                 if [[ $elapsed -ge $INITIAL_DELAY ]]; then
                     if is_fan_active; then
-                        log "Initiating active frequency control (temp elevated for ${elapsed}s, fan active)"
-                        ACTIVE_CONTROL=true
+                        if [[ $ACTIVE_CONTROL == false ]]; then
+                            log "Initiating active frequency control (temp elevated for ${elapsed}s, fan active)"
+                            ACTIVE_CONTROL=true
+                        fi
                         decrease_frequency
                     else
                         debug "Waiting for fan to activate before controlling frequency"
                     fi
                 fi
             else
-                # Active control - decrease frequency if interval elapsed
+                # Active control and not at max_freq - decrease frequency if interval elapsed
                 local time_since_change=$(($current_time - $LAST_FREQ_CHANGE_TIME))
                 if [[ $time_since_change -ge $FREQ_DECREASE_INTERVAL ]]; then
                     decrease_frequency
