@@ -39,7 +39,6 @@ sudo systemctl restart cpu-freq-controller
 | `FREQ_STEP` | 100000 | Frequency adjustment step in kHz (100MHz) |
 | `FREQ_DECREASE_INTERVAL` | 20 | Interval for decreasing frequency (seconds) |
 | `FREQ_INCREASE_INTERVAL` | 10 | Interval for increasing frequency (seconds) |
-| `MAX_FREQ_LIMIT` | 2000000 | Maximum frequency limit in kHz (2GHz) |
 | `REQUIRE_FAN_ACTIVE` | 1 | Require fan active before reducing frequency (1=yes, 0=no) |
 | `VERBOSE` | 0 | Logging verbosity (0=minimal, 1=debug) |
 
