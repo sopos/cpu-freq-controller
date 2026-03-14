@@ -126,7 +126,7 @@ sudo systemctl disable cpu-freq-controller
 
 ## How It Works
 
-1. **Temperature Monitoring**: The script continuously monitors CPU temperature from `/sys/class/thermal/thermal_zone*/temp`
+1. **Temperature Monitoring**: The script continuously monitors CPU temperature from `/sys/class/thermal/thermal_zone*/temp` every 2 seconds. To avoid reacting to temporary temperature spikes, it uses the average of the current and previous readings for all control decisions
 
 2. **Initial Trigger**: When temperature exceeds the upper limit for 30 seconds AND the cooling fan is active (configurable via `REQUIRE_FAN_ACTIVE`), frequency reduction begins. This 30-second delay also applies when reducing frequency from cpuinfo_max_freq (boost)
 

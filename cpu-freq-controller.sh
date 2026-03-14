@@ -36,6 +36,7 @@ CPU_COUNT=0
 TEMP_ABOVE_START_TIME=0
 LAST_FREQ_CHANGE_TIME=0
 ACTIVE_CONTROL=false
+PREV_TEMP=0
 
 # Logging
 VERBOSE=${VERBOSE:-1}
@@ -230,15 +231,25 @@ jump_to_max_frequency() {
 ###############################################################################
 
 control_loop() {
+    local temp_raw
     local temp
     local current_time
     local temp_above_threshold=false
 
     while true; do
-        temp=$(get_cpu_temperature)
+        temp_raw=$(get_cpu_temperature)
         current_time=$(date +%s)
 
-        debug "Temperature: $(($temp / 1000))°C, Max Freq: $(($CURRENT_MAX_FREQ / 1000)) MHz"
+        # Calculate average of current and previous temperature to smooth out wiggles
+        if [[ $PREV_TEMP -eq 0 ]]; then
+            # First reading - use raw value
+            temp=$temp_raw
+        else
+            # Average of current and previous
+            temp=$(( ($temp_raw + $PREV_TEMP) / 2 ))
+        fi
+
+        debug "Temperature: $(($temp_raw / 1000))°C (avg: $(($temp / 1000))°C), Max Freq: $(($CURRENT_MAX_FREQ / 1000)) MHz"
 
         # Check if temperature is above upper limit
         if [[ $temp -gt $TEMP_UPPER_LIMIT ]]; then
@@ -313,6 +324,9 @@ control_loop() {
                 fi
             fi
         fi
+
+        # Update previous temperature for next iteration
+        PREV_TEMP=$temp_raw
 
         sleep $TEMP_CHECK_INTERVAL
     done
