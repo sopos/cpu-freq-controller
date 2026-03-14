@@ -49,6 +49,16 @@ sudo systemctl restart cpu-freq-controller
 TEMP_UPPER_LIMIT=70000
 ```
 
+**Environment Variable:** `VERBOSE` can also be set via environment variable for temporary debugging:
+```bash
+# Run with debug logging
+sudo VERBOSE=1 ./cpu-freq-controller.sh
+
+# Or set in systemd service (edit /etc/systemd/system/cpu-freq-controller.service)
+[Service]
+Environment="VERBOSE=1"
+```
+
 ## Installation
 
 ### Systemd Service (Recommended)

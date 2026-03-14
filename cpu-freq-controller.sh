@@ -21,7 +21,7 @@ FREQ_DECREASE_INTERVAL=20       # Interval for decreasing frequency (seconds)
 FREQ_INCREASE_INTERVAL=10       # Interval for increasing frequency (seconds)
 MAX_FREQ_LIMIT=2000000          # Maximum frequency limit in kHz (2GHz)
 REQUIRE_FAN_ACTIVE=1            # Require fan to be active before frequency reduction (1=yes, 0=no)
-VERBOSE=0                       # Verbose logging (0=minimal, 1=debug)
+VERBOSE=${VERBOSE:-0}           # Verbose logging (0=minimal, 1=debug) - can be set via environment
 
 # Load configuration from file if it exists
 if [[ -f "$CONFIG_FILE" ]]; then
