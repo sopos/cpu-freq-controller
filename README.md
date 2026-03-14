@@ -33,8 +33,8 @@ sudo systemctl restart cpu-freq-controller
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `TEMP_CHECK_INTERVAL` | 2 | Temperature check interval in seconds |
-| `TEMP_UPPER_LIMIT` | 65000 | Upper temperature limit in millidegrees (65°C) |
-| `TEMP_HYSTERESIS` | 5000 | Temperature hysteresis in millidegrees (5°C) |
+| `TEMP_UPPER_LIMIT` | 66000 | Upper temperature limit in millidegrees (66°C) |
+| `TEMP_HYSTERESIS` | 2000 | Temperature hysteresis in millidegrees (2°C) |
 | `INITIAL_DELAY` | 30 | Delay before first frequency change (seconds) |
 | `FREQ_STEP` | 100000 | Frequency adjustment step in kHz (100MHz) |
 | `FREQ_DECREASE_INTERVAL` | 20 | Interval for decreasing frequency (seconds) |
