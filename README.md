@@ -41,7 +41,7 @@ sudo systemctl restart cpu-freq-controller
 | `FREQ_INCREASE_INTERVAL` | 10 | Interval for increasing frequency (seconds) |
 | `MAX_FREQ_LIMIT` | 2000000 | Maximum frequency limit in kHz (2GHz) |
 | `REQUIRE_FAN_ACTIVE` | 1 | Require fan active before reducing frequency (1=yes, 0=no) |
-| `VERBOSE` | 1 | Logging verbosity (0=minimal, 1=debug) |
+| `VERBOSE` | 0 | Logging verbosity (0=minimal, 1=debug) |
 
 **Example:** To change the temperature limit to 70°C, edit `/etc/cpu-freq-controller.conf`:
 ```bash
