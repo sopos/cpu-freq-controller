@@ -8,6 +8,7 @@ set -e
 
 INSTALL_PATH="/usr/local/bin/cpu-freq-controller.sh"
 SERVICE_PATH="/etc/systemd/system/cpu-freq-controller.service"
+CONFIG_PATH="/etc/cpu-freq-controller.conf"
 
 # Check if running as root
 if [[ $EUID -ne 0 ]]; then
@@ -38,6 +39,19 @@ fi
 if [[ -f "$INSTALL_PATH" ]]; then
     echo "Removing script: $INSTALL_PATH"
     rm -f "$INSTALL_PATH"
+fi
+
+# Ask about configuration file
+if [[ -f "$CONFIG_PATH" ]]; then
+    echo ""
+    read -p "Remove configuration file $CONFIG_PATH? (y/N): " -n 1 -r
+    echo ""
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        echo "Removing configuration file: $CONFIG_PATH"
+        rm -f "$CONFIG_PATH"
+    else
+        echo "Keeping configuration file: $CONFIG_PATH"
+    fi
 fi
 
 # Reload systemd

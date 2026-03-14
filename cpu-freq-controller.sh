@@ -8,7 +8,10 @@
 
 set -euo pipefail
 
-# Configuration
+# Configuration file
+CONFIG_FILE="/etc/cpu-freq-controller.conf"
+
+# Default configuration values
 TEMP_CHECK_INTERVAL=2           # Temperature check interval in seconds
 TEMP_UPPER_LIMIT=65000          # Upper temperature limit in millidegrees (65°C)
 TEMP_HYSTERESIS=5000            # Temperature hysteresis in millidegrees (5°C)
@@ -17,6 +20,13 @@ FREQ_STEP=100000                # Frequency step in kHz (100MHz)
 FREQ_DECREASE_INTERVAL=20       # Interval for decreasing frequency (seconds)
 FREQ_INCREASE_INTERVAL=10       # Interval for increasing frequency (seconds)
 MAX_FREQ_LIMIT=2000000          # Maximum frequency limit in kHz (2GHz)
+
+# Load configuration from file if it exists
+if [[ -f "$CONFIG_FILE" ]]; then
+    # Source the config file in a safe way
+    # shellcheck disable=SC1090
+    source "$CONFIG_FILE"
+fi
 
 # Global variables
 ORIGINAL_MAX_FREQ=""

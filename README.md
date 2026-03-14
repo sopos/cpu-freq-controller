@@ -21,10 +21,18 @@ A Linux bash script that monitors CPU temperature and dynamically adjusts maximu
 
 ## Configuration
 
-Key parameters can be configured at the top of `cpu-freq-controller.sh`:
+Configuration is managed through `/etc/cpu-freq-controller.conf`. The installation script creates this file with all parameters commented out. Uncomment and modify values to override defaults.
+
+**After changing the configuration file, restart the service:**
+```bash
+sudo systemctl restart cpu-freq-controller
+```
+
+### Configuration Parameters
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
+| `TEMP_CHECK_INTERVAL` | 2 | Temperature check interval in seconds |
 | `TEMP_UPPER_LIMIT` | 65000 | Upper temperature limit in millidegrees (65°C) |
 | `TEMP_HYSTERESIS` | 5000 | Temperature hysteresis in millidegrees (5°C) |
 | `INITIAL_DELAY` | 30 | Delay before first frequency change (seconds) |
@@ -32,6 +40,13 @@ Key parameters can be configured at the top of `cpu-freq-controller.sh`:
 | `FREQ_DECREASE_INTERVAL` | 20 | Interval for decreasing frequency (seconds) |
 | `FREQ_INCREASE_INTERVAL` | 10 | Interval for increasing frequency (seconds) |
 | `MAX_FREQ_LIMIT` | 2000000 | Maximum frequency limit in kHz (2GHz) |
+| `VERBOSE` | 1 | Logging verbosity (0=minimal, 1=debug) |
+
+**Example:** To change the temperature limit to 70°C, edit `/etc/cpu-freq-controller.conf`:
+```bash
+# Uncomment and modify:
+TEMP_UPPER_LIMIT=70000
+```
 
 ## Installation
 
