@@ -10,7 +10,7 @@ A Linux bash script that monitors CPU temperature and dynamically adjusts maximu
 - **Hysteresis support**: Prevents frequency oscillation with configurable temperature hysteresis
 - **Graceful shutdown**: Restores original frequency limits on exit
 - **Systemd integration**: Can run as a system service
-- **Comprehensive logging**: Logs all frequency changes and temperature events
+- **Comprehensive logging**: Logs all frequency changes and temperature events to stderr
 
 ## Requirements
 
@@ -74,14 +74,14 @@ Key parameters can be configured at the top of `cpu-freq-controller.sh`:
 
 ### Viewing Logs
 
-**Systemd journal:**
+**Systemd journal** (when running as a service):
 ```bash
 sudo journalctl -u cpu-freq-controller -f
 ```
 
-**Log file:**
+**Manual execution** (logs to stderr):
 ```bash
-sudo tail -f /var/log/cpu-freq-controller.log
+sudo ./cpu-freq-controller.sh 2>&1 | tee cpu-freq.log
 ```
 
 ### Stopping the Service

@@ -27,7 +27,6 @@ LAST_FREQ_CHANGE_TIME=0
 ACTIVE_CONTROL=false
 
 # Logging
-LOG_FILE="/var/log/cpu-freq-controller.log"
 VERBOSE=${VERBOSE:-1}
 
 ###############################################################################
@@ -36,13 +35,13 @@ VERBOSE=${VERBOSE:-1}
 
 log() {
     local msg="[$(date '+%Y-%m-%d %H:%M:%S')] $*"
-    echo "$msg" | tee -a "$LOG_FILE"
+    echo "$msg" >&2
 }
 
 debug() {
     if [[ $VERBOSE -ge 1 ]]; then
         local msg="[$(date '+%Y-%m-%d %H:%M:%S')] DEBUG: $*"
-        echo "$msg" >> "$LOG_FILE"
+        echo "$msg" >&2
     fi
 }
 
