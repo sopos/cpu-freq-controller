@@ -39,6 +39,7 @@ sudo systemctl restart cpu-freq-controller
 | `FREQ_STEP` | 100000 | Frequency adjustment step in kHz (100MHz) |
 | `FREQ_DECREASE_INTERVAL` | 20 | Interval for decreasing frequency (seconds) |
 | `FREQ_INCREASE_INTERVAL` | 10 | Interval for increasing frequency (seconds) |
+| `MAX_FREQ_OVERRIDE` | 0 | Override max frequency in kHz (0=use hardware max) |
 | `REQUIRE_FAN_ACTIVE` | 1 | Require fan active before reducing frequency (1=yes, 0=no) |
 | `VERBOSE` | 0 | Logging verbosity (0=minimal, 1=debug) |
 
@@ -47,6 +48,13 @@ sudo systemctl restart cpu-freq-controller
 # Uncomment and modify:
 TEMP_UPPER_LIMIT=70000
 ```
+
+**Example:** To limit maximum frequency to 2.5GHz (even if hardware supports higher):
+```bash
+# Uncomment and modify:
+MAX_FREQ_OVERRIDE=2500000
+```
+This is useful for thermal management, power saving, or testing.
 
 **Environment Variable:** `VERBOSE` can also be set via environment variable for temporary debugging:
 ```bash

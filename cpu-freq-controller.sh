@@ -19,6 +19,7 @@ INITIAL_DELAY=30                # Delay before first frequency change (seconds)
 FREQ_STEP=100000                # Frequency step in kHz (100MHz)
 FREQ_DECREASE_INTERVAL=20       # Interval for decreasing frequency (seconds)
 FREQ_INCREASE_INTERVAL=10       # Interval for increasing frequency (seconds)
+MAX_FREQ_OVERRIDE=0             # Override max frequency in kHz (0=use hardware max)
 REQUIRE_FAN_ACTIVE=1            # Require fan to be active before frequency reduction (1=yes, 0=no)
 VERBOSE=${VERBOSE:-0}           # Verbose logging (0=minimal, 1=debug) - can be set via environment
 
@@ -218,6 +219,18 @@ initialize_frequency_control() {
     # Cache static CPU frequency information
     CPUINFO_MIN_FREQ=$(get_cpuinfo_min_freq)
     CPUINFO_MAX_FREQ=$(get_cpuinfo_max_freq)
+
+    local hardware_max=$CPUINFO_MAX_FREQ
+
+    # Apply manual override if configured
+    if [[ $MAX_FREQ_OVERRIDE -gt 0 ]]; then
+        if [[ $MAX_FREQ_OVERRIDE -lt $CPUINFO_MAX_FREQ ]]; then
+            CPUINFO_MAX_FREQ=$MAX_FREQ_OVERRIDE
+            log "Max frequency overridden: $hardware_max -> $CPUINFO_MAX_FREQ kHz ($(($CPUINFO_MAX_FREQ / 1000)) MHz)"
+        else
+            log "Max frequency override ($MAX_FREQ_OVERRIDE kHz) ignored: higher than hardware max ($CPUINFO_MAX_FREQ kHz)"
+        fi
+    fi
 
     ORIGINAL_MAX_FREQ=$(get_current_scaling_max_freq)
     CURRENT_MAX_FREQ=$ORIGINAL_MAX_FREQ
