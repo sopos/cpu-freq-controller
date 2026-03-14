@@ -220,6 +220,10 @@ initialize_frequency_control() {
     CPUINFO_MIN_FREQ=$(get_cpuinfo_min_freq)
     CPUINFO_MAX_FREQ=$(get_cpuinfo_max_freq)
 
+    ORIGINAL_MAX_FREQ=$(get_current_scaling_max_freq)
+    CURRENT_MAX_FREQ=$ORIGINAL_MAX_FREQ
+    log "Original max frequency: $ORIGINAL_MAX_FREQ kHz ($(($ORIGINAL_MAX_FREQ / 1000)) MHz)"
+
     local hardware_max=$CPUINFO_MAX_FREQ
 
     # Apply manual override if configured
@@ -227,14 +231,14 @@ initialize_frequency_control() {
         if [[ $MAX_FREQ_OVERRIDE -lt $CPUINFO_MAX_FREQ ]]; then
             CPUINFO_MAX_FREQ=$MAX_FREQ_OVERRIDE
             log "Max frequency overridden: $hardware_max -> $CPUINFO_MAX_FREQ kHz ($(($CPUINFO_MAX_FREQ / 1000)) MHz)"
+
+            # Set the override frequency immediately
+            set_scaling_max_freq $CPUINFO_MAX_FREQ
+            log "Applied override frequency: $CPUINFO_MAX_FREQ kHz ($(($CPUINFO_MAX_FREQ / 1000)) MHz)"
         else
             log "Max frequency override ($MAX_FREQ_OVERRIDE kHz) ignored: higher than hardware max ($CPUINFO_MAX_FREQ kHz)"
         fi
     fi
-
-    ORIGINAL_MAX_FREQ=$(get_current_scaling_max_freq)
-    CURRENT_MAX_FREQ=$ORIGINAL_MAX_FREQ
-    log "Original max frequency: $ORIGINAL_MAX_FREQ kHz ($(($ORIGINAL_MAX_FREQ / 1000)) MHz)"
 
     log "CPU frequency range: $CPUINFO_MIN_FREQ - $CPUINFO_MAX_FREQ kHz ($(($CPUINFO_MIN_FREQ / 1000)) - $(($CPUINFO_MAX_FREQ / 1000)) MHz)"
 

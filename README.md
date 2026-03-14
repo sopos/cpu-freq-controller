@@ -54,7 +54,7 @@ TEMP_UPPER_LIMIT=70000
 # Uncomment and modify:
 MAX_FREQ_OVERRIDE=2500000
 ```
-This is useful for thermal management, power saving, or testing.
+This is useful for thermal management, power saving, or testing. The override is applied immediately at startup.
 
 **Environment Variable:** `VERBOSE` can also be set via environment variable for temporary debugging:
 ```bash
